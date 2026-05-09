@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Name=Apple
+Exec=/home/emersonberry/apps/apple/apple.sh
+Icon=/home/emersonberry/apps/apple/apple.svg
+Comment=apple
+Terminal=false
+StartupNotify=false
+Path=/home/emersonberry/Desktop
+Categories=Development

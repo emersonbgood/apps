@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Roulette - Live Action</title>
+    <style>
+        body { font-family: sans-serif; background: #1a1a1a; color: white; display: flex; flex-direction: column; align-items: center; padding: 20px; }
+        .stats { font-size: 28px; margin-bottom: 20px; color: #2ed573; font-weight: bold; }
+        
+        /* Wheel UI */
+        .wheel-box { position: relative; width: 300px; height: 300px; margin-bottom: 30px; }
+        #visual-wheel {
+            width: 100%; height: 100%; border-radius: 50%; border: 10px solid #555;
+            background: conic-gradient(#2ecc71 0deg 9.7deg, #2f3542 9.7deg 19.4deg, #ff4757 19.4deg 29.1deg, #2f3542 29.1deg 38.8deg, #ff4757 38.8deg 48.5deg, #2f3542 48.5deg 58.2deg, #ff4757 58.2deg 67.9deg, #2f3542 67.9deg 77.6deg, #ff4757 77.6deg 87.3deg, #2f3542 87.3deg 97deg, #ff4757 97deg 106.7deg, #2f3542 106.7deg 116.4deg, #ff4757 116.4deg 126.1deg, #2f3542 126.1deg 135.8deg, #ff4757 135.8deg 145.5deg, #2f3542 145.5deg 155.2deg, #ff4757 155.2deg 164.9deg, #2f3542 164.9deg 174.6deg, #ff4757 174.6deg 184.3deg, #2f3542 184.3deg 194deg, #ff4757 194deg 203.7deg, #2f3542 203.7deg 213.4deg, #ff4757 213.4deg 223.1deg, #2f3542 223.1deg 232.8deg, #ff4757 232.8deg 242.5deg, #2f3542 242.5deg 252.2deg, #ff4757 252.2deg 261.9deg, #2f3542 261.9deg 271.6deg, #ff4757 271.6deg 281.3deg, #2f3542 281.3deg 291deg, #ff4757 291deg 300.7deg, #2f3542 300.7deg 310.4deg, #ff4757 310.4deg 320.1deg, #2f3542 320.1deg 329.8deg, #ff4757 329.8deg 339.5deg, #2f3542 339.5deg 349.2deg, #ff4757 349.2deg 360deg);
+            transition: transform 4s cubic-bezier(0.1, 0, 0.2, 1);
+        }
+        #number-display {
+            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            width: 100px; height: 100px; background: #444; border: 5px solid #fff;
+            border-radius: 50%; font-size: 48px; font-weight: bold; display: flex; align-items: center; justify-content: center; z-index: 10;
+        }
+
+        /* Controls & Switches */
+        .controls { background: #333; padding: 20px; border-radius: 15px; display: grid; grid-template-columns: 1fr 1fr; gap: 10px; width: 340px; }
+        .switch-row { grid-column: span 2; display: flex; justify-content: space-between; align-items: center; padding: 5px 10px; background: #222; border-radius: 8px; margin-bottom: 2px; font-size: 14px; }
+        
+        .switch { position: relative; display: inline-block; width: 44px; height: 20px; }
+        .switch input { opacity: 0; width: 0; height: 0; }
+        .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #555; transition: .4s; border-radius: 20px; }
+        .slider:before { position: absolute; content: ""; height: 14px; width: 14px; left: 3px; bottom: 3px; background-color: white; transition: .4s; border-radius: 50%; }
+        input:checked + .slider { background-color: #2ed573; }
+        #martingale-switch:checked + .slider { background-color: #9b59b6; }
+        input:checked + .slider:before { transform: translateX(24px); }
+
+        button { padding: 12px; cursor: pointer; border: none; border-radius: 5px; font-weight: bold; }
+        .btn-spin { grid-column: span 2; background: #f1c40f; font-size: 20px; }
+    </style>
+</head>
+<body>
+
+    <div class="stats">💰 Coins: <span id="balance">...</span></div>
+    
+    <div class="wheel-box">
+        <div id="visual-wheel"></div>
+        <div id="number-display">?</div>
+    </div>
+
+    <div id="status-msg" style="margin-bottom: 10px; font-weight: bold;">Select RED or BLACK</div>
+
+    <div class="controls">
+        <div class="switch-row">
+            <span>Auto-Double on Loss</span>
+            <label class="switch">
+                <input type="checkbox" id="martingale-switch">
+                <span class="slider"></span>
+            </label>
+        </div>
+
+        <div class="switch-row">
+            <span>Auto Spin</span>
+            <label class="switch">
+                <input type="checkbox" id="auto-spin-switch">
+                <span class="slider"></span>
+            </label>
+        </div>
+        
+        <input type="number" id="bet-amount" value="100" style="grid-column: span 2; padding: 10px; text-align: center;">
+        
+        <button id="spin-btn" class="btn-spin">SPIN</button>
+        <button onclick="setBet('red')" style="background:#ff4757; color:white">RED</button>
+        <button onclick="setBet('black')" style="background:#2f3542; color:white">BLACK</button>
+    </div>
+
+    <script>
+        let balance = parseInt(localStorage.getItem('casinoBalance')) || 10000;
+        let baseBet = 100;
+        let currentBetType = null, currentRotation = 0;
+        const redNumbers = [1, 3, 5, 7, 9, 12, 14, 16, 19, 21, 23, 25, 27, 30, 32, 34, 36];
+
+        function updateUI() {
+            document.getElementById('balance').innerText = balance;
+            localStorage.setItem('casinoBalance', balance);
+        }
+        updateUI();
+
+        function setBet(type) { 
+            currentBetType = type; 
+            document.getElementById('status-msg').innerText = "Betting on: " + type.toUpperCase(); 
+        }
+
+        function spin() {
+            const betInput = document.getElementById('bet-amount');
+            const display = document.getElementById('number-display');
+            const spinBtn = document.getElementById('spin-btn');
+            let bet = parseInt(betInput.value);
+            
+            if (!currentBetType) { 
+                document.getElementById('auto-spin-switch').checked = false;
+                return alert("Select RED or BLACK!"); 
+            }
+            if (bet > balance) { 
+                document.getElementById('auto-spin-switch').checked = false;
+                return alert("Insufficient funds!"); 
+            }
+
+            balance -= bet; 
+            updateUI();
+            spinBtn.disabled = true;
+
+            // 1. Start Physical Wheel Spin
+            const result = Math.floor(Math.random() * 37);
+            currentRotation += (360 * 5) + (result * (360/37));
+            document.getElementById('visual-wheel').style.transform = `rotate(-${currentRotation}deg)`;
+
+            // 2. Start Live Number/Color Scrolling
+            let scrollInterval = setInterval(() => {
+                let tempNum = Math.floor(Math.random() * 37);
+                display.innerText = tempNum;
+                display.style.backgroundColor = (tempNum === 0) ? "#2ecc71" : (redNumbers.includes(tempNum) ? "#ff4757" : "#2f3542");
+            }, 80);
+
+            // 3. Finalize Result
+            setTimeout(() => {
+                clearInterval(scrollInterval);
+                display.innerText = result;
+                display.style.backgroundColor = (result === 0) ? "#2ecc71" : (redNumbers.includes(result) ? "#ff4757" : "#2f3542");
+
+                let won = (currentBetType === 'red' && redNumbers.includes(result)) || 
+                          (currentBetType === 'black' && !redNumbers.includes(result) && result !== 0);
+                
+                if (won) {
+                    balance += bet * 2;
+                    if (document.getElementById('martingale-switch').checked) betInput.value = baseBet;
+                } else {
+                    if (document.getElementById('martingale-switch').checked) betInput.value = bet * 2;
+                }
+
+                document.getElementById('status-msg').innerText = won ? "WINNER!" : "LOST!";
+                updateUI();
+                spinBtn.disabled = false;
+
+                // Check for Auto Spin
+                if (document.getElementById('auto-spin-switch').checked) {
+                    setTimeout(spin, 1000);
+                }
+            }, 4000);
+        }
+
+        document.getElementById('spin-btn').onclick = spin;
+
+        document.getElementById('bet-amount').onchange = function() {
+            if (!document.getElementById('martingale-switch').checked) {
+                baseBet = parseInt(this.value);
+            }
+        };
+    </script>
+</body>
+</html>
