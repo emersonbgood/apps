@@ -1,6 +1,0 @@
-.circle:hover {
-	transform: rotate(15deg) scale(1.1);
-}
-.circle {
-	transition: transform 0.2s ease-in-out;
-}
