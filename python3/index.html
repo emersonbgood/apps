@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <title>PiMessage</title>
+    <!-- Keep your existing <style> block here exactly as you provided it -->
+    <style>
+        /* ... paste your CSS from the prompt here ... */
+    </style>
+</head>
+<body>
+
+<div id="sidebar">
+    <div class="side-hdr">
+        <button class="blue-link" onclick="toggleView('settings')">Settings</button>
+        <strong>Messages</strong>
+        <button class="blue-link" style="font-size: 24px;" onclick="showModal()">+</button>
+    </div>
+    <div id="contact-list" style="flex:1; overflow-y:auto;">
+        <div class="contact-item active">
+            <div class="status-dot online"></div>
+            <div><strong>Global Chat</strong><br><small style="color:var(--subtext)">Connected via ngrok</small></div>
+        </div>
+    </div>
+</div>
+
+<div id="chat-view" class="active">
+    <div class="view-hdr"><strong id="chat-title">ngrok Server</strong></div>
+    <div id="thread"></div>
+    <div class="input-bar">
+        <textarea id="msg-input" placeholder="iMessage" rows="1"></textarea>
+        <button onclick="sendSignal()" style="background:var(--bubble-out); color:white; border:none; width:36px; height:36px; border-radius:50%; cursor:pointer; font-weight:bold;">↑</button>
+    </div>
+</div>
+
+<!-- Modal and Settings Views (from your code) -->
+<div id="settings-view">...</div>
+<div id="contact-modal">...</div>
+
+<script src="https://cloudflare.com"></script>
+<script>
+    var socket = io();
+    var thread = document.getElementById('thread');
+    var input = document.getElementById('msg-input');
+
+    // 1. RECEIVE MESSAGE
+    socket.on('message', function(data) {
+        var isMe = data.id === socket.id;
+        var bubble = document.createElement('div');
+        bubble.className = 'bubble ' + (isMe ? 'sent' : 'received');
+        
+        // Using your requested <h6> and <p> structure
+        bubble.innerHTML = `<div><h6>${isMe ? 'me' : 'from'}</h6><p>${data.msg}</p></div>`;
+        
+        thread.appendChild(bubble);
+        thread.scrollTop = thread.scrollHeight; // Auto-scroll
+    });
+
+    // 2. SEND MESSAGE
+    function sendSignal() {
+        var val = input.value.trim();
+        if (val !== "") {
+            socket.emit('message', {msg: val, id: socket.id});
+            input.value = '';
+        }
+    }
+
+    // UI Helpers
+    function toggleTheme() {
+        const root = document.documentElement;
+        root.setAttribute('data-theme', root.getAttribute('data-theme') === 'dark' ? 'light' : 'dark');
+    }
+    function toggleView(view) {
+        document.getElementById('chat-view').classList.toggle('active', view === 'chat');
+        document.getElementById('settings-view').classList.toggle('active', view === 'settings');
+    }
+</script>
+</body>
+</html>

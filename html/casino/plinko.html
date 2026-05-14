@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Plinko - Auto Drop</title>
+    <style>
+        body { font-family: sans-serif; display: flex; flex-direction: column; align-items: center; background: #1a1a1a; color: white; padding-top: 20px; }
+        .stats { font-size: 28px; margin-bottom: 15px; color: #2ed573; font-weight: bold; }
+        .controls { margin-bottom: 20px; background: #333; padding: 15px; border-radius: 10px; display: flex; gap: 10px; align-items: center; }
+        .bet-input { padding: 10px; width: 80px; border-radius: 5px; border: none; font-size: 16px; text-align: center; }
+        button { padding: 10px 20px; cursor: pointer; border: none; border-radius: 5px; font-weight: bold; }
+        #drop-btn { background: #ff4757; color: white; }
+        #auto-btn { background: #3498db; color: white; }
+        #auto-btn.active { background: #2ecc71; box-shadow: 0 0 10px #2ecc71; }
+        canvas { background: #222; border-radius: 10px; }
+    </style>
+</head>
+<body>
+    <div class="stats">💰 Coins: <span id="balance">...</span></div>
+    <div class="controls">
+        <input type="number" id="bet-amount" class="bet-input" value="100">
+        <button id="drop-btn">DROP BALL</button>
+        <button id="auto-btn">AUTO: OFF</button>
+    </div>
+    <canvas id="plinkoBoard" width="400" height="500"></canvas>
+
+    <script>
+        let balance = parseInt(localStorage.getItem('casinoBalance')) || 10000;
+        let autoMode = false;
+        function updateUI() { document.getElementById('balance').innerText = balance; localStorage.setItem('casinoBalance', balance); }
+        updateUI();
+
+        const canvas = document.getElementById('plinkoBoard');
+        const ctx = canvas.getContext('2d');
+        const rows = 12, spacing = 30, startX = canvas.width / 2, startY = 50;
+        const multipliers = [5, 2, 1.2, 0.5, 0.2, 0.2, 0.5, 1.2, 2, 5];
+
+        function drawBoard() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height); ctx.fillStyle = "#777";
+            for (let r = 0; r < rows; r++) {
+                for (let i = 0; i <= r; i++) {
+                    const x = startX - (r * spacing / 2) + (i * spacing);
+                    const y = startY + (r * spacing);
+                    ctx.beginPath(); ctx.arc(x, y, 3, 0, Math.PI * 2); ctx.fill();
+                }
+            }
+        }
+
+        const dropBtn = document.getElementById('drop-btn');
+        const autoBtn = document.getElementById('auto-btn');
+
+        autoBtn.onclick = () => {
+            autoMode = !autoMode;
+            autoBtn.innerText = `AUTO: ${autoMode ? 'ON' : 'OFF'}`;
+            autoBtn.classList.toggle('active', autoMode);
+            if (autoMode && !dropBtn.disabled) drop();
+        };
+
+        function drop() {
+            let bet = parseInt(document.getElementById('bet-amount').value);
+            if (bet > balance) { autoMode = false; autoBtn.innerText = "AUTO: OFF"; return alert("No coins!"); }
+            balance -= bet; updateUI();
+            dropBtn.disabled = true;
+
+            let x = startX, y = startY - 20, currentRow = 0;
+            const interval = setInterval(() => {
+                drawBoard(); ctx.fillStyle = "#f1c40f"; ctx.beginPath(); ctx.arc(x, y, 7, 0, Math.PI * 2); ctx.fill();
+                if (currentRow < rows) { y += spacing; x += Math.random() < 0.5 ? -spacing/2 : spacing/2; currentRow++; }
+                else {
+                    clearInterval(interval);
+                    const boardWidth = rows * spacing;
+                    const relativeX = x - (startX - boardWidth / 2);
+                    const slotIndex = Math.max(0, Math.min(Math.floor((relativeX / boardWidth) * multipliers.length), multipliers.length - 1));
+                    balance += Math.floor(bet * multipliers[slotIndex]); updateUI();
+                    dropBtn.disabled = false;
+                    if (autoMode) setTimeout(drop, 500);
+                }
+            }, 40);
+        }
+        dropBtn.onclick = drop; drawBoard();
+    </script>
+</body>
+</html>

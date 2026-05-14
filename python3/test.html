@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Raspberry Pi Leaderboard</title>
+    <style>
+        body { font-family: sans-serif; text-align: center; padding: 20px; }
+        .box { border: 1px solid #ccc; padding: 20px; margin: 10px auto; max-width: 300px; }
+        input { margin-bottom: 10px; width: 80%; }
+    </style>
+</head>
+<body>
+
+    <h1>RPi High Scores</h1>
+
+    <div class="box">
+        <h3>Current Record</h3>
+        <p id="record">Loading...</p>
+        <button onclick="getRecord()">Refresh Record</button>
+    </div>
+
+    <div class="box">
+        <h3>Submit Score</h3>
+        <input type="text" id="name" placeholder="Your Name"><br>
+        <input type="number" id="score" placeholder="Your Score"><br>
+        <button onclick="sendScore()">Send to Pi</button>
+    </div>
+
+    <script>
+        const BASE_URL = "https://tobie-uncontemning-marissa.ngrok-free.dev/highscore";
+        const HEADERS = {
+            "Content-Type": "application/json",
+            "ngrok-skip-browser-warning": "true" // CRITICAL for ngrok free tier
+        };
+
+        // --- GET DATA ---
+        async function getRecord() {
+            try {
+                const response = await fetch(`${BASE_URL}/get_high_score`, {
+                    method: "GET",
+                    headers: HEADERS
+                });
+                const data = await response.json();
+                document.getElementById('record').innerText = `${data.name}: ${data.score}`;
+            } catch (err) {
+                console.error(err);
+                alert("Could not connect to Pi");
+            }
+        }
+
+        // --- SEND DATA ---
+        async function sendScore() {
+            const name = document.getElementById('name').value;
+            const score = document.getElementById('score').value;
+
+            try {
+                const response = await fetch(`${BASE_URL}/highscore`, {
+                    method: "POST",
+                    headers: HEADERS,
+                    body: JSON.stringify({ name: name, score: parseInt(score) })
+                });
+                const result = await response.json();
+                if (result.status === "success") {
+                    alert("Score saved!");
+                    getRecord(); // Refresh the list
+                }
+            } catch (err) {
+                console.error(err);
+                alert("Failed to send score");
+            }
+        }
+
+        // Load the record when the page opens
+        getRecord();
+    </script>
+</body>
+</html>
